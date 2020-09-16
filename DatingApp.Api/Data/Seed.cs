@@ -40,6 +40,7 @@ namespace DatingApp.Api.Data
                     // // user.PasswordSalt = passwordSalt;
                     // user.UserName = user.UserName.ToLower();
                     // context.Users.Add(user);
+                    user.Photos.SingleOrDefault().IsApproved = true;
                     userManager.CreateAsync(user, "password").Wait();
                     userManager.AddToRoleAsync(user, "Member");
                 }

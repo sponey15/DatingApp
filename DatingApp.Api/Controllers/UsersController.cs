@@ -9,6 +9,7 @@ using DatingApp.Api.Helpers;
 using DatingApp.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace DatingApp.Api.Controllers
 {
@@ -19,14 +20,16 @@ namespace DatingApp.Api.Controllers
     {
         private readonly IDatingRepository _repo;
         private readonly IMapper _mapper;
-        public UsersController(IDatingRepository repo, IMapper mapper)
+        private readonly DataContext _context;
+        public UsersController(IDatingRepository repo, IMapper mapper, DataContext context)
         {
+            _context = context;
             _mapper = mapper;
             _repo = repo;
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetUsers([FromQuery]UserParams userParams)
+        public async Task<IActionResult> GetUsers([FromQuery] UserParams userParams)
         {
             var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
 
@@ -43,7 +46,7 @@ namespace DatingApp.Api.Controllers
 
             var usersToReturn = _mapper.Map<IEnumerable<UserForListDto>>(users);
 
-            Response.AddPagination(users.CurrentPage, users.PageSize, 
+            Response.AddPagination(users.CurrentPage, users.PageSize,
                 users.TotalCount, users.TotalPages);
 
             return Ok(usersToReturn);
@@ -52,7 +55,14 @@ namespace DatingApp.Api.Controllers
         [HttpGet("{id}", Name = "GetUser")]
         public async Task<IActionResult> GetUser(int id)
         {
-            var user = await _repo.GetUser(id);
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+
+            var user = await _repo.GetUser(id); //tutaj trzeba bylo przekazac do metody to currentUser 
+
+            if (currentUserId == user.Id)
+            {
+                user = await _context.Users.Include(p => p.Photos).IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Id == id);
+            }
 
             var userToReturn = _mapper.Map<UserForDetailedDto>(user);
 
@@ -80,12 +90,12 @@ namespace DatingApp.Api.Controllers
         {
             if (id != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value))
                 return Unauthorized();
-            
+
             var like = await _repo.GetLike(id, recipientId);
 
             if (like != null)
                 return BadRequest("You already like this user");
-            
+
             if (await _repo.GetUser(recipientId) == null)
                 return NotFound();
 

@@ -13,3 +13,12 @@
     background-color: #fff;
     border-top: none;
 }
+
+.card-img-wrapper {
+    overflow: hidden;
+    position: relative;
+}
+
+.card-photo-body {
+    position: absolute;
+}
